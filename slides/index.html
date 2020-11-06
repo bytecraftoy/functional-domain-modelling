@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Functional Domain Modelling</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+
+    </style>
+</head>
+<body>
+<textarea id="source">
+
+class: center, middle
+
+# Functional Domain Modelling
+
+---
+
+# Agenda
+
+* Introduction
+* Theory
+* Techniques
+* Example
+* Coding Exercise
+* Demos and Discussion
+
+---
+
+# Part One - Introduction
+
+---
+
+class: center, middle
+
+# Bytecraft Oy
+
+[`hello@bytecraft.fi`](mailto:hello@bytecraft.fi)
+
+[`bytecraft.fi`](https://bytecraft.fi)
+
+---
+
+class: center, middle
+
+Juha Heljoranta
+
+Partner and Software Craftsman at Bytecraft Oy
+
+---
+
+# Part Two - Theory
+
+* Domain Driven Design
+* Software Architectures
+* Functional Programming
+* Railway Oriented Programming
+
+---
+
+## Domain Driven Design
+
+<img src="./bounded_context.png" alt="" width="70%" />
+<br>
+<span style="font-size:0.5em;">Copyright 2018 Scott Wlaschin, Domain Modeling Made Functional.</span>
+
+* **Structure and language of software code should match the business domain.**
+* Bounded context: context within which a model applies
+  * E.g Billing and Shipping are probably different contexts
+
+---
+
+## Object Oriented Architecture
+
+Layer Cake
+
+<img src="./layer_cake.png" alt="" width="65%" />
+<br>
+<span style="font-size:0.5em;">Copyright 2018 Scott Wlaschin, Domain Modeling Made Functional.</span>
+
+Use cases typically cut through layers.
+
+---
+
+## Architecture, Vertical Slices
+
+Can be improved by splitting flows into vertical slices.
+
+<img src="./vertical_slice.png" alt="" width="40%" />
+<br>
+<span style="font-size:0.5em;">Copyright 2018 Scott Wlaschin, Domain Modeling Made Functional.</span>
+
+---
+
+## Architecture, Vertical Slices
+
+Still not good.
+
+<img src="./horizontal_pipe.png" alt="" width="100%" />
+<br>
+<span style="font-size:0.5em;">Copyright 2018 Scott Wlaschin, Domain Modeling Made Functional.</span>
+
+---
+
+## Domain Centric Architectures
+
+### Onion Architecture
+
+<img src="./onion.png" alt="" width="80%" />
+<br>
+<span style="font-size:0.5em;">Copyright 2018 Scott Wlaschin, Domain Modeling Made Functional.</span>
+
+---
+
+## Domain Centric Architectures
+
+### Clean Architecture
+
+<img src="./clean_architecture.jpg" alt="" width="60%" />
+
+https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html
+
+---
+
+## Domain Centric Architectures
+
+Plus others such as hexagonal.
+
+---
+
+## Architecture, I/O
+
+Push I/O to edges.
+<img src="./io.png" alt="" width="100%" />
+<br>
+<span style="font-size:0.5em;">Copyright 2018 Scott Wlaschin, Domain Modeling Made Functional.</span>
+
+---
+
+## Functional Programming, 101
+
+* Functions
+* Immutability
+* Algebraic Data Types
+* Avoid (observable) side effects (mutable state, exceptions, I/O, etc)
+
+---
+
+## Railway Oriented Programming
+
+![RailwaySwitch](./Recipe_RailwaySwitch.png)
+
+--
+
+![RailwaySwitch1](./Recipe_RailwaySwitch1.png)
+
+--
+
+![RailwaySwitchTransparent](./Recipe_Railway_Transparent.png)
+
+https://fsharpforfunandprofit.com/posts/recipe-part2/
+and
+https://fsharpforfunandprofit.com/posts/against-railway-oriented-programming/
+
+---
+
+# Part Three - Techniques
+
+---
+
+## Techniques
+
+- Use types to describe domain, e.g. `UnvalidatedPayment` and `PaidInvoice`
+- Avoid primitive/generic types like: `Int`, `List` or `String`
+- Add abstraction using types, functions, modules and aliases
+
+---
+
+## Techniques
+
+```kotlin
+fun validateOrderId(id: Int): Boolean
+```
+vs.
+```kotlin
+data class UnvalidatedOrderId(val id: Int)
+sealed class OrderId
+data class ValidOrderId(val id: Int): OrderId()
+data class InvalidOrderId(val id: Int): OrderId()
+typealias ValidateOrderId = (UnvalidatedOrderId) -> OrderId
+```
+typescript esimerkki
+scala esimerkki
+
+---
+
+# Part Four - Example
+
+---
+
+## Example Case: User Borrows a Book
+
+*This is a **design** exercise to explore and refine domain model using types and abstractions.*
+
+*You should defer actual implementation as long as possible.*
+
+---
+
+## Case: user borrows a book, 1
+
+Write minimal amount of code which might describe the use case
+
+```kotlin
+data class User()
+data class Book()
+data class Borrow()
+typealias BorrowBook = (User, Book) -> Borrow
+```
+
+It doesn't even have to compile.
+
+Notice: this is not how DDD actually works but we try to emulate it somewhat.
+
+---
+
+## Case: user borrows a book, 2
+
+Work in small increments. Commit often.
+
+```kotlin
+data class User(val id: Int)
+data class Book(val id: Int)
+data class Borrow(val user: User, val book: Book)
+typealias BorrowBook = (User, Book) -> Borrow
+```
+
+---
+
+## Case: user borrows a book, 3
+
+Start figuring out different outcomes.
+
+```kotlin
+data class User(val id: Int)
+data class Book(val id: Int)
+
+sealed class Borrow
+data class Borrowed(val user: User, val book: Book): Borrow()
+data class BookNotCurrentlyAvailable(val user: User, val book: Book): Borrow()
+
+typealias BorrowBook = (User, Book) -> Borrow
+```
+
+---
+
+## Case: user borrows a book, 4
+
+All outcomes behind single `Borrow` type.
+
+```kotlin
+data class User(val id: Int)
+data class Book(val id: Int)
+
+sealed class Borrow
+data class Borrowed(val user: User, val book: Book): Borrow()
+data class BookNotCurrentlyAvailable(val user: User, val book: Book): Borrow()
+data class BookNotFound(val book: Book): Borrow()
+data class UserNotFound(val user: User): Borrow()
+
+typealias BorrowBook = (User, Book) -> Borrow
+```
+
+---
+
+## Sidetrack
+
+Railway oriented programming.
+
+```kotlin
+sealed class Result&lt;out T, out E>
+data class Success&lt;T, E>(val success: T) : Result&lt;T, E>()
+data class Failure&lt;T, E>(val error: E) : Result&lt;T, E>()
+```
+
+---
+
+## Case: user borrows a book, 5
+
+If we want keep `Success` and `Failure` cases separate
+
+```kotlin
+data class User(val id: Int)
+data class Book(val id: Int)
+data class Borrowed(val user: User, val book: Book)
+
+sealed class BorrowFailure
+data class BookNotCurrentlyAvailable(
+    val user: User, val book: Book): BorrowFailure()
+data class BookNotFound(val book: Book): BorrowFailure()
+data class UserNotFound(val user: User): BorrowFailure()
+
+typealias BorrowBook = (User, Book) -> Result&lt;Borrowed, BorrowFailure>
+```
+
+---
+
+## Case: user borrows a book, 6
+
+How do we get User and Book?
+
+```kotlin
+data class UserId(val id: Int)
+data class BookId(val id: Int)
+data class Borrowed(val userId: UserId, val bookId: BookId)
+
+sealed class BorrowFailure
+data class BookNotCurrentlyAvailable(
+    val userId: UserId, val bookId: BookId): BorrowFailure()
+data class BookNotFound(val bookId: BookId): BorrowFailure()
+data class UserNotFound(val userId: UserId): BorrowFailure()
+
+typealias FindUserById = (UserId) -> User? // ???
+typealias UserExistsById = (UserId) -> Boolean // ???
+typealias BorrowBook = (UserId, BookId) -> Result&lt;Borrowed, BorrowFailure>
+```
+
+---
+
+## Case: user borrows a book, 7
+
+Keep refining the domain using types.
+
+```kotlin
+data class UnvalidatedUserId(val id: Int)
+data class UnvalidatedBookId(val id: Int)
+data class ValidUserId(val id: Int)
+data class ValidBookId(val id: Int)
+data class Borrowed(val validUserId: ValidUserId, val validBookId: ValidBookId)
+
+sealed class BorrowFailure
+data class BookNotCurrentlyAvailable(
+    val validUserId: ValidUserId, val validBookId: ValidBookId): BorrowFailure()
+data class BookNotFound(val bookId: UnvalidatedBookId): BorrowFailure()
+data class UserNotFound(val userId: UnvalidatedUserId): BorrowFailure()
+
+typealias ValidateUserId = (UnvalidatedUserId) -> ValidUserId?
+typealias ValidateBookId = (UnvalidatedBookId) -> ValidBookId?
+typealias BorrowBook =
+    (ValidateUserId) ->   // dependency
+    (ValidateBookId) ->   // dependency
+    (UnvalidatedUserId, UnvalidatedBookId) -> Result&lt;Borrowed, BorrowFailure>
+```
+
+---
+
+## Case: user borrows a book, 8
+
+Domain model starts to feel good enough at this point. We're done 🎉
+
+```kotlin
+data class UnvalidatedUserId(val id: Int)
+data class UnvalidatedBookId(val id: Int)
+data class ValidUserId(val id: Int)
+data class ValidBookId(val id: Int)
+data class Borrowed(val validUserId: ValidUserId, val validBookId: ValidBookId)
+
+sealed class BorrowFailure
+data class BookNotCurrentlyAvailable(
+    val validUserId: ValidUserId, val validBookId: ValidBookId): BorrowFailure()
+data class BookNotFound(val bookId: UnvalidatedBookId): BorrowFailure()
+data class UserNotFound(val userId: UnvalidatedUserId): BorrowFailure()
+
+typealias ValidateUserId = (UnvalidatedUserId) -> ValidUserId?
+typealias ValidateBookId = (UnvalidatedBookId) -> ValidBookId?
+typealias MarkBookBorrowed = (ValidUserId, ValidBookId) -> Borrowed?
+
+typealias BorrowBook =
+    (ValidateUserId, ValidateBookId, MarkBookBorrowed) ->   // dependencies
+    (UnvalidatedUserId, UnvalidatedBookId) -> Result&lt;Borrowed, BorrowFailure>
+```
+
+---
+
+## Case: user borrows a book, 9
+
+Implementation. This is not important part of this exercise but just to demonstrate show how it actually might be done.
+
+```kotlin
+typealias BorrowBook =
+    (ValidateUserId, ValidateBookId, MarkBookBorrowed) ->   // dependencies
+    (UnvalidatedUserId, UnvalidatedBookId) -> Result&lt;Borrowed, BorrowFailure>
+
+val borrowBook: BorrowBook = { validateUserId, validateBookId, markBookBorrowed ->
+    { unvalidatedUserId, unvalidatedBookId ->
+        val validUserId = validateUserId(unvalidatedUserId)
+        val validBookId = validateBookId(unvalidatedBookId)
+        if (validUserId == null) {
+            Failure(UserNotFound(unvalidatedUserId))
+        } else if (validBookId == null){
+            Failure(BookNotFound(unvalidatedBookId))
+        } else {
+            val borrow = markBookBorrowed(validUserId, validBookId)
+            if (borrow == null) {
+                Failure(BookNotCurrentlyAvailable(validUserId, validBookId))
+            } else {
+                Success(borrow)
+            }
+        }
+    }
+}
+```
+
+---
+
+# Part Five - Coding Exercise
+
+Some suggestions:
+* Add a book into library catalog
+  * Validate book info (e.g. name, author, isbn)
+* User renews an item
+  * Item can be renewed up to five times in a row.
+
+---
+
+# Part Four - Demos and Discussion
+
+---
+
+class: center, middle
+
+# Thank you!
+
+
+</textarea>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js">
+</script>
+<script>
+var slideshow = remark.create(
+);
+
+</script>
+</body>
+</html>
