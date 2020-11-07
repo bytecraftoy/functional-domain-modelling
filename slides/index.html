@@ -186,7 +186,7 @@ https://fsharpforfunandprofit.com/posts/against-railway-oriented-programming/
 
 ---
 
-## Techniques
+## Techniques, Kotlin Example
 
 ```kotlin
 fun validateOrderId(id: Int): Boolean
@@ -199,11 +199,53 @@ data class ValidOrderId(val id: Int): OrderId()
 data class InvalidOrderId(val id: Int): OrderId()
 typealias ValidateOrderId = (UnvalidatedOrderId) -> OrderId
 ```
-typescript esimerkki
-scala esimerkki
 
 ---
 
+## Techniques, Scala Example
+
+```scala
+def validateOrderId(id: Int): Boolean
+```
+vs.
+```scala
+case class UnvalidatedOrderId(id: Int)
+sealed trait OrderId
+case class ValidOrderId(id: Int) extends OrderId
+case class InvalidOrderId(id: Int) extends OrderId
+type ValidateOrderId = (UnvalidatedOrderId) => OrderId
+```
+
+---
+
+## Techniques, TypeScript Example
+
+```typescript
+function validateOrderId(id: number): boolean
+```
+vs.
+```typescript
+type UnvalidatedOrderId = { readonly unvalidatedOrderId: number }
+type OrderId = TODO
+type ValidateOrderId = (unvalidatedOrderId : UnvalidatedOrderId) => OrderId
+```
+
+---
+
+## Techniques, F# Example
+
+```fsharp
+let validateOrderId(id: int): bool
+```
+vs.
+```fsharp
+type UnvalidatedOrderId = UnvalidatedOrderId of int
+type OrderId =
+  | ValidOrderId of int
+  | InvalidOrderId of int
+type ValidateOrderId = UnvalidatedOrderId -> OrderId
+```
+---
 # Part Four - Example
 
 ---
@@ -229,7 +271,7 @@ typealias BorrowBook = (User, Book) -> Borrow
 
 It doesn't even have to compile.
 
-Notice: this is not how DDD actually works but we try to emulate it somewhat.
+*Note: this is not how DDD actually works but we just have to start somewhere.*
 
 ---
 
