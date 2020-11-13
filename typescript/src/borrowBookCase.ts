@@ -17,24 +17,20 @@ type ValidBookId = { readonly validBookId: number }
 
 type Borrowed = { validUserId: ValidUserId, validBookId: ValidBookId }
 
-abstract class BorrowFailure {
-}
-class BookNotCurrentlyAvailable extends BorrowFailure {
+class BookNotCurrentlyAvailable {
     constructor(public readonly validUserId: ValidUserId, public readonly validBookId: ValidBookId) {
-        super()
     }
-
 }
-class BookNotFound extends BorrowFailure {
+class BookNotFound {
     constructor(public readonly unvalidatedBookId: UnvalidatedBookId) {
-        super()
     }
 }
-class UserNotFound extends BorrowFailure {
+class UserNotFound {
     constructor(public readonly unvalidatedUserId: UnvalidatedUserId) {
-        super()
     }
 }
+
+type BorrowFailure = BookNotCurrentlyAvailable | BookNotFound | UserNotFound
 
 type ValidateUserId = (unvalidatedUserId: UnvalidatedUserId) => ValidUserId | undefined
 type ValidateBookId = (unvalidatedBookId: UnvalidatedBookId) => ValidBookId | undefined
@@ -49,13 +45,13 @@ const borrowBook: BorrowBook =
         (unvalidatedUserId: UnvalidatedUserId, unvalidatedBookId: UnvalidatedBookId) => {
             let validUserId = validateUserId(unvalidatedUserId)
             let validBookId = validateBookId(unvalidatedBookId)
-            if (validUserId === undefined) {
+            if (!validUserId) {
                 return new Failure(new UserNotFound(unvalidatedUserId))
-            } else if (validBookId === undefined) {
+            } else if (!validBookId) {
                 return new Failure(new BookNotFound(unvalidatedBookId))
             } else {
                 let borrow = markBookBorrowed(validUserId, validBookId)
-                if (borrow === undefined) {
+                if (!borrow) {
                     return new Failure(new BookNotCurrentlyAvailable(validUserId, validBookId))
                 } else {
                     return new Success(borrow)
