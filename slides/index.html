@@ -59,6 +59,20 @@ Partner and Software Craftsman at Bytecraft Oy
 
 ---
 
+# Part One - Introduction
+
+Rate from one to three (1. beginner, 2. junior, 3. senior) how experienced you are with
+
+a. Domain Driven Design<br/>
+b. Functional Programming
+
+Example:
+```
+a: 1, b: 2
+```
+
+---
+
 # Part Two - Theory
 
 * Domain Driven Design
@@ -182,7 +196,35 @@ https://fsharpforfunandprofit.com/posts/against-railway-oriented-programming/
 
 - Use types to describe domain, e.g. `UnvalidatedPayment` and `PaidInvoice`
 - Avoid primitive/generic types like: `Int`, `List` or `String`
+```kotlin
+id: Int
+```
+vs
+```kotlin
+id: UserId
+```
 - Add abstraction using types, functions, modules and aliases
+
+---
+
+### OO vs. FP
+
+```kotlin
+interface UserService {
+    fun userExists(id: Int): Boolean
+}
+```
+vs.
+```kotlin
+typealias UserExists = (Int) -> Boolean
+```
+Were to put/collect functions? The most important thing is to group them meaningfully. e.g. per (sub)domain or context.
+Different languages have different ways to group code e.g.:
+* modules
+* packages
+* objects
+* classes
+* etc.
 
 ---
 
@@ -226,7 +268,9 @@ function validateOrderId(id: number): boolean
 vs.
 ```typescript
 type UnvalidatedOrderId = { readonly unvalidatedOrderId: number }
-type OrderId = TODO
+type ValidOrderId = { readonly validOrderId: number }
+type InvalidOrderId = { readonly invalidOrderId: number }
+type OrderId = ValidOrderId | InvalidOrderId
 type ValidateOrderId = (unvalidatedOrderId : UnvalidatedOrderId) => OrderId
 ```
 
