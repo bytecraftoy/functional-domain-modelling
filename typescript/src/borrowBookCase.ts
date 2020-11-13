@@ -1,16 +1,12 @@
 abstract class Result<T, E> { }
 class Success<T, E> extends Result<T, E> {
-    readonly success: T
-    constructor(success: T) {
+    constructor(public readonly success: T) {
         super()
-        this.success = success
     }
 }
 class Failure<T, E> extends Result<T, E> {
-    readonly failure: E
-    constructor(failure: E) {
+    constructor(public readonly failure: E) {
         super()
-        this.failure = failure
     }
 }
 
@@ -24,33 +20,45 @@ type Borrowed = { validUserId: ValidUserId, validBookId: ValidBookId }
 abstract class BorrowFailure {
 }
 class BookNotCurrentlyAvailable extends BorrowFailure {
-    readonly validUserId: ValidUserId
-    readonly validBookId: ValidBookId
-    constructor(validUserId: ValidUserId, validBookId: ValidBookId) {
+    constructor(public readonly validUserId: ValidUserId, public readonly validBookId: ValidBookId) {
         super()
-        this.validUserId = validUserId
-        this.validBookId = validBookId
     }
+
 }
 class BookNotFound extends BorrowFailure {
-    readonly unvalidatedBookId: UnvalidatedBookId
-    constructor(unvalidatedBookId: UnvalidatedBookId) {
+    constructor(public readonly unvalidatedBookId: UnvalidatedBookId) {
         super()
-        this.unvalidatedBookId = unvalidatedBookId
     }
 }
 class UserNotFound extends BorrowFailure {
-    readonly unvalidatedUserId: UnvalidatedUserId
-    constructor(unvalidatedUserId: UnvalidatedUserId) {
+    constructor(public readonly unvalidatedUserId: UnvalidatedUserId) {
         super()
-        this.unvalidatedUserId = unvalidatedUserId
     }
 }
 
-type ValidateUserId = (unvalidatedUserId: UnvalidatedUserId) => ValidUserId
-type ValidateBookId = (unvalidatedBookId: UnvalidatedBookId) => ValidBookId
-type MarkBookBorrowed = (validUserId: ValidUserId, ValidBookId: ValidBookId) => Borrowed
+type ValidateUserId = (unvalidatedUserId: UnvalidatedUserId) => ValidUserId | undefined
+type ValidateBookId = (unvalidatedBookId: UnvalidatedBookId) => ValidBookId | undefined
+type MarkBookBorrowed = (validUserId: ValidUserId, ValidBookId: ValidBookId) => Borrowed | undefined
 
 type BorrowBook =
     (validateUserId: ValidateUserId, validateBookId: ValidateBookId, barkBookBorrowed: MarkBookBorrowed) =>   // dependencies
         (unvalidatedUserId: UnvalidatedUserId, unvalidatedBookId: UnvalidatedBookId) => Result<Borrowed, BorrowFailure>
+
+const borrowBook: BorrowBook =
+    (validateUserId: ValidateUserId, validateBookId: ValidateBookId, markBookBorrowed: MarkBookBorrowed) =>
+        (unvalidatedUserId: UnvalidatedUserId, unvalidatedBookId: UnvalidatedBookId) => {
+            let validUserId = validateUserId(unvalidatedUserId)
+            let validBookId = validateBookId(unvalidatedBookId)
+            if (validUserId === undefined) {
+                return new Failure(new UserNotFound(unvalidatedUserId))
+            } else if (validBookId === undefined) {
+                return new Failure(new BookNotFound(unvalidatedBookId))
+            } else {
+                let borrow = markBookBorrowed(validUserId, validBookId)
+                if (borrow === undefined) {
+                    return new Failure(new BookNotCurrentlyAvailable(validUserId, validBookId))
+                } else {
+                    return new Success(borrow)
+                }
+            }
+        }
