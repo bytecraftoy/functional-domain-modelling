@@ -6,5 +6,5 @@ Requirements
 
 To compile and run
 ```
-sbt test
+sbt compile
 ```

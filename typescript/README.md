@@ -5,5 +5,6 @@ Requirements
 
 To compile and run
 ```
-tsc
+npm install --save-dev typescript
+npx tsc
 ```

@@ -11,11 +11,6 @@ data class ValidBookId(val id: Int)
 
 data class Borrowed(val validUserId: ValidUserId, val validBookId: ValidBookId)
 
-interface UserService {
-    fun userExists(id: Int): Boolean
-}
-typealias UserExists = (Int) -> Boolean
-
 sealed class BorrowFailure
 data class BookNotCurrentlyAvailable(
         val validUserId: ValidUserId, val validBookId: ValidBookId): BorrowFailure()
