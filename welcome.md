@@ -17,4 +17,4 @@ Please, take a look at material beforehand if you have time:
 We are practicing techniques described by Scott Wlaschin in his book
 [Domain Modeling Made Functional](https://pragprog.com/titles/swdddf/domain-modeling-made-functional/).
 
-![Domain Modeling Made Functional book cover](./ddd-made-functional-cover.jpg)
+![Domain Modeling Made Functional book cover](./slides/ddd-made-functional-cover.jpg)
