@@ -19,8 +19,8 @@ object BorrowBookCase {
   case class BookNotFound(bookId: UnvalidatedBookId) extends BorrowFailure
   case class UserNotFound(userId: UnvalidatedUserId) extends BorrowFailure
 
-  type ValidateUserId = (UnvalidatedUserId) => Option[ValidUserId]
-  type ValidateBookId = (UnvalidatedBookId) => Option[ValidBookId]
+  type ValidateUserId = UnvalidatedUserId => Option[ValidUserId]
+  type ValidateBookId = UnvalidatedBookId => Option[ValidBookId]
   type MarkBookBorrowed = (ValidUserId, ValidBookId) => Option[Borrowed]
 
   type BorrowBook =

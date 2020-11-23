@@ -203,7 +203,7 @@ vs
 ```kotlin
 id: UserId
 ```
-- Add abstraction using types, functions, modules and aliases
+- Add abstraction using types, functions, modules, packages, aliases, etc.
 
 ---
 
@@ -255,7 +255,7 @@ case class UnvalidatedOrderId(id: Int)
 sealed trait OrderId
 case class ValidOrderId(id: Int) extends OrderId
 case class InvalidOrderId(id: Int) extends OrderId
-type ValidateOrderId = (UnvalidatedOrderId) => OrderId
+type ValidateOrderId = UnvalidatedOrderId => OrderId
 ```
 
 ---
@@ -479,7 +479,7 @@ typealias BorrowBook =
 
 ## Case: user borrows a book, 9
 
-Implementation. This is not important part of this exercise but just to demonstrate show how it actually might be done.
+Implementation.
 
 ```kotlin
 typealias BorrowBook =
