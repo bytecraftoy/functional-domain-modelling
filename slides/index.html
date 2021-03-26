@@ -79,6 +79,7 @@ a: 1, b: 2
 * Software Architectures
 * Functional Programming
 * Railway Oriented Programming
+* Transforming Programming
 
 ---
 
@@ -91,6 +92,21 @@ a: 1, b: 2
 * **Structure and language of software code should match the business domain.**
 * Bounded context: context within which a model applies
   * E.g Billing and Shipping are probably different contexts
+
+---
+
+### Domain Driven Design - Event pipelines
+
+<img src="./event-pipeline.png" alt="" width="70%" />
+<br>
+Difference between Event and Command is that Event is an noncancelable fact and Command is something which can fail.
+
+Domain Events are written in the past tense. Commands are written in the imperative.
+
+Example:
+* Event: BeerOrdered
+* Command: OrderBeer
+* Event : BeerDelivered
 
 ---
 
@@ -164,9 +180,25 @@ Push I/O to edges.
 ## Functional Programming, 101
 
 * Functions
+* Functions
+* Functions
 * Immutability
-* Algebraic Data Types
+* Algebraic Data Types (e.g. a type formed by combining other types)
+  * Product types
+  * Sum types
 * Avoid (observable) side effects (mutable state, exceptions, I/O, etc)
+
+---
+
+### Functional Programming, schools
+
+Very roughly two styles
+* Pure
+* Exceptionalists
+
+Pure prefer pure functional programming where no side effects are not allowed (use IO monad et al.).
+
+Exceptionalists (or pragmatists) consider exceptions to be exceptional and therefore OK.
 
 ---
 
@@ -185,6 +217,25 @@ Push I/O to edges.
 https://fsharpforfunandprofit.com/posts/recipe-part2/
 and
 https://fsharpforfunandprofit.com/posts/against-railway-oriented-programming/
+
+---
+
+## Transforming Programming
+
+```sh
+$ find . -type f | xargs wc -l | sort -n | tail -5
+```
+```javascript
+const double = (n) => n * 2;
+const increment = (n) => n + 1;
+
+// without pipeline operator
+double(increment(double(double(5)))); // 42
+
+// with pipeline operator
+5 |> double |> double |> increment |> double; // 42
+```
+https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Pipeline_operator
 
 ---
 
@@ -390,8 +441,8 @@ data class Book(val id: Int)
 data class Borrowed(val user: User, val book: Book)
 
 sealed class BorrowFailure
-data class BookNotCurrentlyAvailable(
-    val user: User, val book: Book): BorrowFailure()
+data class BookNotCurrentlyAvailable(val user: User,
+                                     val book: Book): BorrowFailure()
 data class BookNotFound(val book: Book): BorrowFailure()
 data class UserNotFound(val user: User): BorrowFailure()
 
@@ -407,17 +458,16 @@ How do we get User and Book?
 ```kotlin
 data class UserId(val id: Int)
 data class BookId(val id: Int)
-data class Borrowed(val userId: UserId, val bookId: BookId)
 
-sealed class BorrowFailure
-data class BookNotCurrentlyAvailable(
-    val userId: UserId, val bookId: BookId): BorrowFailure()
-data class BookNotFound(val bookId: BookId): BorrowFailure()
-data class UserNotFound(val userId: UserId): BorrowFailure()
+sealed class Borrow
+data class Borrowed(val user: UserId, val book: BookId): Borrow()
+data class BookNotCurrentlyAvailable(val user: UserId, val book: BookId): Borrow()
+data class BookNotFound(val book: BookId): Borrow()
+data class UserNotFound(val user: UserId): Borrow()
 
-typealias FindUserById = (UserId) -> User? // ???
+typealias FindUserById = (UserId) -> UserId? // ???
 typealias UserExistsById = (UserId) -> Boolean // ???
-typealias BorrowBook = (UserId, BookId) -> Result&lt;Borrowed, BorrowFailure>
+typealias BorrowBook = (UserId, BookId) -> Borrow?
 ```
 
 ---
@@ -431,79 +481,112 @@ data class UnvalidatedUserId(val id: Int)
 data class UnvalidatedBookId(val id: Int)
 data class ValidUserId(val id: Int)
 data class ValidBookId(val id: Int)
-data class Borrowed(val validUserId: ValidUserId, val validBookId: ValidBookId)
 
-sealed class BorrowFailure
-data class BookNotCurrentlyAvailable(
-    val validUserId: ValidUserId, val validBookId: ValidBookId): BorrowFailure()
-data class BookNotFound(val bookId: UnvalidatedBookId): BorrowFailure()
-data class UserNotFound(val userId: UnvalidatedUserId): BorrowFailure()
+sealed class Borrow
+data class Borrowed(val user: ValidUserId, val book: ValidBookId): Borrow()
+data class BookNotCurrentlyAvailable(val user: ValidUserId,
+                                     val book: ValidBookId): Borrow()
+data class BookNotFound(val book: UnvalidatedBookId): Borrow()
+data class UserNotFound(val user: UnvalidatedUserId): Borrow()
 
 typealias ValidateUserId = (UnvalidatedUserId) -> ValidUserId?
 typealias ValidateBookId = (UnvalidatedBookId) -> ValidBookId?
 typealias BorrowBook =
     (ValidateUserId) ->   // dependency
     (ValidateBookId) ->   // dependency
-    (UnvalidatedUserId, UnvalidatedBookId) -> Result&lt;Borrowed, BorrowFailure>
+    (UnvalidatedUserId, UnvalidatedBookId) -> Borrow?
 ```
 
 ---
 
 ## Case: user borrows a book, 8
 
-Domain model starts to feel good enough at this point. We're done 🎉
+Fix Event names and add Command.
 
 ```kotlin
 data class UnvalidatedUserId(val id: Int)
 data class UnvalidatedBookId(val id: Int)
 data class ValidUserId(val id: Int)
 data class ValidBookId(val id: Int)
-data class Borrowed(val validUserId: ValidUserId, val validBookId: ValidBookId)
 
-sealed class BorrowFailure
-data class BookNotCurrentlyAvailable(
-    val validUserId: ValidUserId, val validBookId: ValidBookId): BorrowFailure()
-data class BookNotFound(val bookId: UnvalidatedBookId): BorrowFailure()
-data class UserNotFound(val userId: UnvalidatedUserId): BorrowFailure()
+sealed class Borrowed
+data class BookBorrowed(val validUserId: ValidUserId,
+                        val validBookId: ValidBookId) : Borrowed()
+data class BookNotFound(val bookId: UnvalidatedBookId) : Borrowed()
+data class UserNotFound(val userId: UnvalidatedUserId) : Borrowed()
+data class BookNotCurrentlyAvailable(val validUserId: ValidUserId,
+                                     val validBookId: ValidBookId) : Borrowed()
+
+data class BorrowBook(val unvalidatedBookId: UnvalidatedBookId,
+                      val unvalidatedUserId: UnvalidatedUserId)
 
 typealias ValidateUserId = (UnvalidatedUserId) -> ValidUserId?
 typealias ValidateBookId = (UnvalidatedBookId) -> ValidBookId?
-typealias MarkBookBorrowed = (ValidUserId, ValidBookId) -> Borrowed?
 
-typealias BorrowBook =
-    (ValidateUserId, ValidateBookId, MarkBookBorrowed) ->   // dependencies
-    (UnvalidatedUserId, UnvalidatedBookId) -> Result&lt;Borrowed, BorrowFailure>
+typealias BorrowBookFlow =
+            (ValidateUserId) ->   // dependency
+            (ValidateBookId) ->   // dependency
+            (BorrowBook) -> Borrowed
 ```
 
 ---
 
 ## Case: user borrows a book, 9
 
+Solve how to mark book borrowed. Good enough. We're done 🎉
+
+```kotlin
+data class UnvalidatedUserId(val id: Int)
+data class UnvalidatedBookId(val id: Int)
+data class ValidUserId(val id: Int)
+data class ValidBookId(val id: Int)
+
+sealed class Borrowed
+data class BookBorrowed(val validUserId: ValidUserId,
+                        val validBookId: ValidBookId) : Borrowed()
+data class BookNotFound(val bookId: UnvalidatedBookId) : Borrowed()
+data class UserNotFound(val userId: UnvalidatedUserId) : Borrowed()
+data class BookNotCurrentlyAvailable(val validUserId: ValidUserId,
+                                     val validBookId: ValidBookId) : Borrowed()
+
+data class BorrowBook(val unvalidatedBookId: UnvalidatedBookId,
+                      val unvalidatedUserId: UnvalidatedUserId)
+
+typealias ValidateUserId = (UnvalidatedUserId) -> ValidUserId?
+typealias ValidateBookId = (UnvalidatedBookId) -> ValidBookId?
+
+typealias MarkBookBorrowed = (ValidUserId, ValidBookId) -> BookBorrowed?
+
+typealias BorrowBookFlow =
+            (ValidateUserId, ValidateBookId, MarkBookBorrowed) -> // dependencies
+            (BorrowBook) -> Borrowed
+```
+
+---
+
+## Case: user borrows a book, 10
+
 Implementation.
 
 ```kotlin
-typealias BorrowBook =
-    (ValidateUserId, ValidateBookId, MarkBookBorrowed) ->   // dependencies
-    (UnvalidatedUserId, UnvalidatedBookId) -> Result&lt;Borrowed, BorrowFailure>
+typealias BorrowBookFlow =
+            (ValidateUserId, ValidateBookId, MarkBookBorrowed) -> // dependencies
+            (BorrowBook) -> Borrowed
 
-val borrowBook: BorrowBook = { validateUserId, validateBookId, markBookBorrowed ->
-    { unvalidatedUserId, unvalidatedBookId ->
-        val validUserId = validateUserId(unvalidatedUserId)
-        val validBookId = validateBookId(unvalidatedBookId)
-        if (validUserId == null) {
-            Failure(UserNotFound(unvalidatedUserId))
-        } else if (validBookId == null){
-            Failure(BookNotFound(unvalidatedBookId))
-        } else {
-            val borrow = markBookBorrowed(validUserId, validBookId)
-            if (borrow == null) {
-                Failure(BookNotCurrentlyAvailable(validUserId, validBookId))
-            } else {
-                Success(borrow)
+val borrowBookFlow: BorrowBookFlow =
+    { validateUserId, validateBookId, markBookBorrowed ->
+        { borrowBook ->
+            val validUserId = validateUserId(borrowBook.unvalidatedUserId)
+            val validBookId = validateBookId(borrowBook.unvalidatedBookId)
+            when {
+                validUserId == null -> UserNotFound(borrowBook.unvalidatedUserId)
+                validBookId == null -> BookNotFound(borrowBook.unvalidatedBookId)
+                else ->
+                    markBookBorrowed(validUserId, validBookId)
+                        ?: BookNotCurrentlyAvailable(validUserId, validBookId)
             }
         }
     }
-}
 ```
 
 ---

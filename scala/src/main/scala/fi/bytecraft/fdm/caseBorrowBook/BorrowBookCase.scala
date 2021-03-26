@@ -1,43 +1,41 @@
 package fi.bytecraft.fdm.caseBorrowBook
 
-sealed trait Result[+T, +E]
-case class Success[T, E](success: T) extends Result[T, E]
-case class Failure[T, E](error: E) extends Result[T, E]
-
 object BorrowBookCase {
 
   case class UnvalidatedUserId(id: Int)
   case class UnvalidatedBookId(id: Int)
+
   case class ValidUserId(id: Int)
   case class ValidBookId(id: Int)
 
-  case class Borrowed(validUserId: ValidUserId, validBookId: ValidBookId)
+  case class BorrowBook(unvalidatedBookId: UnvalidatedBookId, unvalidatedUserId: UnvalidatedUserId)
 
-  sealed trait BorrowFailure
-  case class BookNotCurrentlyAvailable(validUserId: ValidUserId,
-                                       validBookId: ValidBookId) extends BorrowFailure
-  case class BookNotFound(bookId: UnvalidatedBookId) extends BorrowFailure
-  case class UserNotFound(userId: UnvalidatedUserId) extends BorrowFailure
+  sealed class Borrowed
+  case class BookBorrowed(validUserId: ValidUserId, validBookId: ValidBookId) extends Borrowed()
+  case class BookNotFound(bookId: UnvalidatedBookId) extends Borrowed()
+  case class UserNotFound(userId: UnvalidatedUserId) extends Borrowed()
+  case class BookNotCurrentlyAvailable(validUserId: ValidUserId, validBookId: ValidBookId) extends Borrowed()
 
-  type ValidateUserId = UnvalidatedUserId => Option[ValidUserId]
-  type ValidateBookId = UnvalidatedBookId => Option[ValidBookId]
-  type MarkBookBorrowed = (ValidUserId, ValidBookId) => Option[Borrowed]
+  type ValidateUserId = (UnvalidatedUserId) => Option[ValidUserId]
+  type ValidateBookId = (UnvalidatedBookId) => Option[ValidBookId]
 
-  type BorrowBook =
+  type MarkBookBorrowed = (ValidUserId, ValidBookId) => Option[BookBorrowed]
+
+  type BorrowBookFlow =
     (ValidateUserId, ValidateBookId, MarkBookBorrowed) => // dependencies
-      (UnvalidatedUserId, UnvalidatedBookId) => Result[Borrowed, BorrowFailure]
+      (BorrowBook) => Borrowed
 
-  val borrowBook: BorrowBook = {
+  val borrowBook: BorrowBookFlow = {
     (validateUserId, validateBookId, markBookBorrowed) => {
-      (unvalidatedUserId, unvalidatedBookId) =>
-        val validUserId = validateUserId(unvalidatedUserId)
-        val validBookId = validateBookId(unvalidatedBookId)
+      (borrowBook) =>
+        val validUserId = validateUserId(borrowBook.unvalidatedUserId)
+        val validBookId = validateBookId(borrowBook.unvalidatedBookId)
         (validUserId, validBookId) match {
-          case (None, _) => Failure(UserNotFound(unvalidatedUserId))
-          case (_, None) => Failure(BookNotFound(unvalidatedBookId))
+          case (None, _) => UserNotFound(borrowBook.unvalidatedUserId)
+          case (_, None) => BookNotFound(borrowBook.unvalidatedBookId)
           case (Some(userId), Some(bookId)) => markBookBorrowed(userId, bookId) match {
-            case Some(borrowed) => Success(borrowed)
-            case None => Failure(BookNotCurrentlyAvailable(userId, bookId))
+            case Some(borrowed) => borrowed
+            case None => BookNotCurrentlyAvailable(userId, bookId)
           }
         }
     }

@@ -3,7 +3,11 @@ type UnvalidatedBookId = UnvalidatedBookId of int
 type ValidUserId = ValidUserId of int
 type ValidBookId = ValidBookId of int
 
-type Borrowed =
+type BorrowBook =
+    { BookId: UnvalidatedBookId
+      UserId: UnvalidatedUserId }
+
+type BookBorrowed =
     { ValidUserId: ValidUserId
       ValidBookId: ValidBookId }
 
@@ -15,31 +19,32 @@ type BookNotFound = { BookId: UnvalidatedBookId }
 
 type UserNotFound = { UserId: UnvalidatedUserId }
 
-type BorrowFailure =
+type Borrowed =
+    | BookBorrowed of BookBorrowed
     | BookNotCurrentlyAvailable of BookNotCurrentlyAvailable
     | BookNotFound of BookNotFound
     | UserNotFound of UserNotFound
 
 type ValidateUserId = UnvalidatedUserId -> ValidUserId option
 type ValidateBookId = UnvalidatedBookId -> ValidBookId option
+
 type MarkBookBorrowed = ValidUserId -> ValidBookId -> Borrowed option
 
-type BorrowBook =
-    ValidateUserId -> ValidateBookId -> MarkBookBorrowed -> UnvalidatedUserId -> UnvalidatedBookId -> Result<Borrowed, BorrowFailure>
+type BorrowBookFlow =
+    ValidateUserId -> ValidateBookId -> MarkBookBorrowed -> BorrowBook -> Borrowed
 
-let borrowBook: BorrowBook =
-    fun validateUserId validateBookId markBookBorrowed unvalidatedUserId unvalidatedBookId ->
-        let validUserId = validateUserId unvalidatedUserId
-        let validBookId = validateBookId unvalidatedBookId
+let borrowBookFlow: BorrowBookFlow =
+    fun validateUserId validateBookId markBookBorrowed borrowBook ->
+        let validUserId = validateUserId borrowBook.UserId
+        let validBookId = validateBookId borrowBook.BookId
 
         match (validUserId, validBookId) with
-        | None, _ -> Error(UserNotFound { UserId = unvalidatedUserId })
-        | _, None -> Error(BookNotFound { BookId = unvalidatedBookId })
+        | None, _ -> UserNotFound { UserId = borrowBook.UserId }
+        | _, None -> BookNotFound { BookId = borrowBook.BookId }
         | Some (userId), Some (bookId) ->
             match markBookBorrowed userId bookId with
-            | Some (borrowed) -> Ok(borrowed)
+            | Some (borrowed) -> borrowed
             | None ->
-                Error
-                    (BookNotCurrentlyAvailable
-                        { ValidUserId = validUserId.Value
-                          ValidBookId = validBookId.Value })
+                BookNotCurrentlyAvailable
+                    { ValidUserId = validUserId.Value
+                      ValidBookId = validBookId.Value }
