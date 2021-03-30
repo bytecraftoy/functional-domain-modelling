@@ -40,14 +40,14 @@ type BorrowBookFlow =
 const borrowBookFlow: BorrowBookFlow =
     (validateUserId: ValidateUserId, validateBookId: ValidateBookId, markBookBorrowed: MarkBookBorrowed) =>
         (borrowBook: BorrowBook) => {
-            let validUserId = validateUserId(borrowBook.unvalidatedUserId)
-            let validBookId = validateBookId(borrowBook.unvalidatedBookId)
+            const validUserId = validateUserId(borrowBook.unvalidatedUserId)
+            const validBookId = validateBookId(borrowBook.unvalidatedBookId)
             if (!validUserId) {
                 return { unvalidatedUserId: borrowBook.unvalidatedUserId } as UserNotFound
             } else if (!validBookId) {
                 return { unvalidatedBookId: borrowBook.unvalidatedBookId } as BookNotFound
             } else {
-                let borrow = markBookBorrowed(validUserId, validBookId)
+                const borrow = markBookBorrowed(validUserId, validBookId)
                 if (!borrow) {
                     return { validUserId: validUserId, validBookId: validBookId } as BookNotCurrentlyAvailable
                 } else {
